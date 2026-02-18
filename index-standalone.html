@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>你画我猜 - 线上版</title>
+  <meta name="description" content="支持 Phantom/Solflare 钱包的多人你画我猜游戏">
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f0e17;
+      --surface: #1a1925;
+      --surface-hover: #252336;
+      --primary: #7c3aed;
+      --primary-hover: #8b5cf6;
+      --accent: #22d3ee;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button {
+      cursor: pointer;
+      font: inherit;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.75rem 1.25rem;
+      background: var(--primary);
+      color: white;
+      transition: background 0.2s, transform 0.1s;
+      font-size: 0.95rem;
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    input {
+      font: inherit;
+      padding: 0.75rem 1rem;
+      border: 2px solid var(--surface-hover);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      width: 100%;
+      font-size: 0.95rem;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page-title {
+      font-size: clamp(1.5rem, 5vw, 1.75rem);
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: var(--text-muted);
+    }
+
+    /* 钱包连接弹窗 */
+    .wallet-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .wallet-modal-content {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow);
+    }
+
+    .wallet-option {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--surface-hover);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 0.75rem;
+      border: 2px solid transparent;
+    }
+
+    .wallet-option:hover {
+      background: var(--bg);
+      border-color: var(--primary);
+    }
+
+    .wallet-option img {
+      width: 32px;
+      height: 32px;
+    }
+
+    .wallet-option span {
+      flex: 1;
+      font-weight: 600;
+    }
+
+    /* 游戏进行页 */
+    .game-play {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0.5rem;
+    }
+
+    .game-play-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .game-play-body {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (min-width: 900px) {
+      .game-play-body {
+        grid-template-columns: 1fr 320px;
+      }
+    }
+
+    .canvas-wrap {
+      background: var(--surface);
+      padding: 0.75rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    #draw-canvas {
+      max-width: 100%;
+      height: auto;
+      touch-action: none;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      justify-content: center;
+    }
+
+    .toolbar button {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .toolbar button.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .toolbar input[type="color"] {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 2px solid var(--surface-hover);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+
+    .toolbar input[type="range"] {
+      width: 100px;
+    }
+
+    .game-aside {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+    }
+
+    .game-aside .card {
+      max-width: none;
+    }
+
+    .chat-messages {
+      max-height: 150px;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 猜词方显示画布，但不显示词语（只显示类别） */
+    #page-game[data-role="guesser"] #draw-section-guesser {
+      display: none !important;
+    }
+
+    /* 移动端优化 */
+    @media (max-width: 600px) {
+      .page {
+        padding: 0.75rem;
+      }
+
+      .card {
+        padding: 1rem;
+      }
+
+      .page-title {
+        font-size: 1.5rem;
+      }
+
+      button {
+        padding: 0.65rem 1rem;
+        font-size: 0.9rem;
+      }
+
+      .game-play-header {
+        font-size: 0.85rem;
+      }
+
+      .toolbar {
+        gap: 0.4rem;
+      }
+
+      .toolbar button {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* 钱包连接状态显示 */
+    .wallet-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: var(--surface-hover);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .wallet-status.connected {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--success);
+    }
+
+    .game-rules-btn {
+      width: 1.75rem;
+      height: 1.75rem;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: var(--surface-hover);
+      color: var(--text-muted);
+      font-size: 1rem;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .game-rules-btn:hover {
+      background: var(--accent);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- 钱包连接弹窗 -->
+  <div id="wallet-modal" class="wallet-modal hidden">
+    <div class="wallet-modal-content">
+      <h2 style="margin-bottom: 0.5rem; text-align: center" id="wallet-modal-title" data-i18n="noWallet">未检测到钱包</h2>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem" id="wallet-modal-desc" data-i18n="installWallet">请安装以下任一扩展后刷新页面，再点击「连接钱包」将自动弹窗连接</p>
+      <div class="wallet-option" onclick="connectWallet('phantom')">
+        <span>🦄 Phantom</span>
+      </div>
+      <div class="wallet-option" onclick="connectWallet('solflare')">
+        <span>🔥 Solflare</span>
+      </div>
+      <button onclick="closeWalletModal()" style="width: 100%; margin-top: 1rem; background: var(--surface-hover)" data-i18n="cancel">取消</button>
+    </div>
+  </div>
+
+  <!-- 语言切换 -->
+  <div style="position: fixed; top: 0.75rem; right: 0.75rem; z-index: 100">
+    <button id="btn-lang" type="button" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; background: var(--surface-hover)">EN</button>
+  </div>
+
+  <!-- 游戏大厅（入口页） -->
+  <div id="page-lobby" class="page">
+    <div style="max-width: 480px; width: 100%">
+      <h1 class="page-title" data-i18n="title">你画我猜 · 线上版</h1>
+      <!-- 大厅上方：连接钱包 / 匿名登录 或 已连接状态 -->
+      <div id="lobby-account" class="card" style="margin-bottom: 1rem; padding: 1rem">
+        <div id="lobby-account-connected" style="display: none">
+          <span data-i18n="loggedInAs">当前账号</span>: <span id="lobby-account-name"></span>
+          <button type="button" onclick="lobbyLogout()" style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; font-size: 0.85rem; background: var(--surface-hover)" data-i18n="logout">登出</button>
+        </div>
+        <div id="lobby-account-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap">
+          <button type="button" onclick="lobbyConnectWallet()" style="flex: 1; min-width: 120px" data-i18n="connectWallet">连接钱包</button>
+          <button type="button" onclick="lobbyAnonymous()" style="flex: 1; min-width: 120px; background: var(--surface-hover)" data-i18n="anonymous">匿名登录</button>
+        </div>
+      </div>
+      <div id="lobby-sync-tip" class="card" style="margin-bottom: 1rem; background: var(--surface-hover); padding: 1rem; font-size: 0.9rem; display: none"></div>
+      <p style="color: var(--text-muted); margin-bottom: 1.5rem; text-align: center"><span data-i18n="online">在线人数</span>: <span id="online-count">0</span></p>
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        <div class="card" style="display: flex; align-items: center; justify-content: space-between; flex-direction: row; cursor: pointer" onclick="enterGame('draw-guess')">
+          <span style="font-size: 2rem">🎨</span>
+          <span style="flex: 1; margin-left: 1rem; font-weight: 600" data-i18n="drawGuess">你画我猜</span>
+          <button type="button" class="game-rules-btn" onclick="event.stopPropagation(); showGameRules('draw-guess')" title="规则" aria-label="规则">ⓘ</button>
+          <button onclick="event.stopPropagation(); enterGame('draw-guess')" data-i18n="enterGame">进入游戏</button>
+        </div>
+        <div class="card" style="display: flex; align-items: center; justify-content: space-between; flex-direction: row; opacity: 0.6; cursor: not-allowed">
+          <span style="font-size: 2rem">🕵</span>
+          <span style="flex: 1; margin-left: 1rem; font-weight: 600" data-i18n="gameUndercover">谁是卧底</span>
+          <button type="button" class="game-rules-btn" onclick="event.stopPropagation(); showGameRules('undercover')" style="opacity: 0.8" title="规则" aria-label="规则">ⓘ</button>
+          <span style="color: var(--text-muted); font-size: 0.9rem" data-i18n="comingSoon">即将推出</span>
+        </div>
+        <div class="card" style="display: flex; align-items: center; justify-content: space-between; flex-direction: row; opacity: 0.6; cursor: not-allowed">
+          <span style="font-size: 2rem">⚡</span>
+          <span style="flex: 1; margin-left: 1rem; font-weight: 600" data-i18n="gameQuiz">快速问答</span>
+          <button type="button" class="game-rules-btn" onclick="event.stopPropagation(); showGameRules('quiz')" style="opacity: 0.8" title="规则" aria-label="规则">ⓘ</button>
+          <span style="color: var(--text-muted); font-size: 0.9rem" data-i18n="comingSoon">即将推出</span>
+        </div>
+      </div>
+      <div class="card" style="max-width: 480px; margin-top: 1rem">
+        <p class="card-title" data-i18n="existingRooms">已有房间 · 快速进入</p>
+        <div id="existing-rooms-list">
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0" data-i18n="noRooms">暂无其他房间，创建或输入房间号加入</p>
+        </div>
+      </div>
+      <button onclick="joinRoom()" style="width: 100%; margin-top: 1rem; background: var(--surface-hover)" data-i18n="joinByCode">输入房间号加入</button>
+    </div>
+  </div>
+
+  <!-- 游戏规则弹窗 -->
+  <div id="game-rules-modal" class="wallet-modal hidden" onclick="if(event.target===this) closeGameRulesModal()">
+    <div class="wallet-modal-content" style="max-width: 420px; max-height: 85vh; overflow-y: auto" onclick="event.stopPropagation()">
+      <h2 id="game-rules-title" style="margin-bottom: 0.75rem; text-align: center"></h2>
+      <div id="game-rules-body" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; white-space: pre-line"></div>
+      <button onclick="closeGameRulesModal()" style="width: 100%; margin-top: 1rem; background: var(--surface-hover)" data-i18n="cancel">取消</button>
+    </div>
+  </div>
+
+  <!-- 房间页 -->
+  <div id="page-room" class="page hidden" style="justify-content: flex-start; padding: 1rem">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 600px; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem">
+      <h1 class="page-title" style="margin-bottom: 0; font-size: clamp(1.25rem, 4vw, 1.5rem)"><span data-i18n="room">房间</span>：<span id="room-id">1234</span></h1>
+      <button onclick="goToLobby()" style="background: var(--surface-hover); font-size: 0.9rem" data-i18n="leaveRoom">退出房间</button>
+    </div>
+    <div class="card" style="max-width: 600px; width: 100%; margin-bottom: 1rem">
+      <p class="card-title"><span data-i18n="playerList">玩家列表</span> (<span id="player-count">0</span>)</p>
+      <ul id="player-list" style="list-style: none"></ul>
+      <p id="countdown-text" style="margin-top: 1rem; color: var(--accent); font-weight: 600; display: none; text-align: center"></p>
+      <div id="confirm-area" style="margin-top: 0.75rem; display: none; text-align: center">
+        <button id="btn-start" type="button" onclick="confirmStart()" style="min-width: 160px" data-i18n="start">开始</button>
+        <span id="confirm-done" style="display: none; color: var(--success)" data-i18n="confirmed">已确认</span>
+      </div>
+    </div>
+    <div class="card" style="max-width: 600px; width: 100%; flex: 1; display: flex; flex-direction: column; min-height: 200px">
+      <p class="card-title" data-i18n="chat">聊天</p>
+      <div id="chat-messages" style="flex: 1; min-height: 100px; max-height: 200px; overflow-y: auto; margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg); border-radius: var(--radius)">
+        <span id="chat-no-msg" style="color: var(--text-muted)" data-i18n="noMsg">暂无消息</span>
+      </div>
+      <div style="display: flex; gap: 0.5rem">
+        <input id="chat-input" type="text" data-i18n-placeholder="inputMsg" placeholder="输入消息..." onkeydown="if(event.key==='Enter') sendChat()">
+        <button onclick="sendChat()" style="white-space: nowrap" data-i18n="send">发送</button>
+      </div>
+    </div>
+    <button id="btn-ready" onclick="toggleReady()" style="margin-top: 1rem; min-width: 160px" data-i18n="ready">准备</button>
+  </div>
+
+  <!-- 游戏进行页 -->
+  <div id="page-game" class="game-play hidden" data-role="guesser">
+    <header class="game-play-header">
+      <span><span id="game-header-room" data-i18n="roomColon">房间</span>：<span id="game-room-id">1234</span></span>
+      <span id="game-header-round-line"><span id="game-header-round" data-i18n="roundNum">第</span> <span id="current-round">2</span> / <span id="max-rounds">8</span><span id="game-header-round-suffix"></span></span>
+    </header>
+    <div class="game-play-body">
+      <section class="game-section draw-section" id="draw-section-painter">
+        <div class="canvas-wrap">
+          <canvas id="draw-canvas" width="800" height="600" style="background: #1e1e2e; border-radius: var(--radius); touch-action: none; cursor: crosshair; width: 100%; max-width: 800px"></canvas>
+        </div>
+        <div class="toolbar" id="draw-toolbar">
+          <button id="tool-brush" class="active" onclick="setTool('brush')" data-i18n="brush">画笔</button>
+          <button id="tool-eraser" onclick="setTool('eraser')" data-i18n="eraser">橡皮</button>
+          <input type="color" id="brush-color" value="#ffffff">
+          <input type="range" id="brush-size" min="2" max="20" value="4">
+          <button onclick="clearCanvas()" data-i18n="clear">清空</button>
+        </div>
+      </section>
+      <section class="game-section draw-section" id="draw-section-guesser" style="display: none; align-items: center; justify-content: center; min-height: 280px; background: var(--surface); border-radius: var(--radius); padding: 2rem;">
+        <p style="color: var(--text-muted); font-size: 1.1rem; text-align: center;" data-i18n="painterDrawing">画家正在作画，请根据下方类别提示猜词</p>
+      </section>
+      <aside class="game-aside">
+        <div class="card game-state-card">
+          <p class="card-title" data-i18n="gameState">游戏状态</p>
+          <p><span data-i18n="painter">画家</span>：<span id="painter-name">-</span></p>
+          <p><span data-i18n="time">时间</span>：<span id="round-time">45</span> <span data-i18n="sec">秒</span></p>
+          <p id="round-display-line"><span data-i18n="rounds">轮数</span>：<span id="round-info">2</span> / <span id="max-rounds-info">8</span><span id="round-suffix"></span></p>
+        </div>
+        <div class="card word-hint-card">
+          <p class="card-title" data-i18n="currentWord">当前词语</p>
+          <p id="word-display" style="font-size: 1.5rem; letter-spacing: 4px; font-weight: 700; text-align: center">类别：动物</p>
+        </div>
+        <div class="card score-card">
+          <p class="card-title" data-i18n="scoreboard">积分榜</p>
+          <ul id="score-list" style="list-style: none"></ul>
+        </div>
+        <div class="card chat-card">
+          <p class="card-title" data-i18n="guessChat">猜词 / 聊天</p>
+          <div id="game-chat-messages" class="chat-messages"></div>
+          <div id="guess-input-area" style="display: flex; gap: 0.5rem; margin-top: 0.5rem">
+            <input id="guess-input" type="text" data-i18n-placeholder="inputAnswer" placeholder="输入答案..." onkeydown="if(event.key==='Enter') handleGuess()">
+            <button onclick="handleGuess()" style="white-space: nowrap" data-i18n="send">发送</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 回合结束页 -->
+  <div id="page-round-end" class="page hidden">
+    <div class="card" style="max-width: 400px; text-align: center">
+      <h2 style="margin-bottom: 1rem; color: var(--accent)" data-i18n="roundEnd">回合结束</h2>
+      <p class="card-title" data-i18n="correctAnswer">正确答案</p>
+      <p id="round-answer" style="font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem">CAT</p>
+      <div id="round-scores" style="text-align: left; margin-bottom: 1rem"></div>
+      <p style="color: var(--text-muted); font-size: 0.9rem" data-i18n="nextRoundIn">秒后进入下一轮...</p>
+    </div>
+  </div>
+
+  <!-- 游戏结束页 -->
+  <div id="page-game-end" class="page hidden">
+    <div class="card" style="max-width: 420px; text-align: center">
+      <h1 style="margin-bottom: 0.5rem; font-size: 2rem">🏆 <span data-i18n="gameOver">游戏结束</span></h1>
+      <p class="card-title" style="margin-bottom: 1.5rem" data-i18n="finalRank">最终排名</p>
+      <ul id="final-ranking" style="list-style: none; margin-bottom: 1.5rem"></ul>
+      <div style="display: flex; gap: 0.75rem; flex-direction: column">
+        <button onclick="playAgain()" style="width: 100%" data-i18n="playAgain">再来一局</button>
+        <button onclick="goToLobby()" style="width: 100%; background: var(--surface-hover)" data-i18n="backLobby">回到大厅</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== 语言 ==========
+    var lang = localStorage.getItem('game_lang') || 'zh'
+    var i18n = {
+      zh: {
+        title: '你画我猜 · 线上版',
+        loginType: '选择登录方式',
+        connectWallet: '连接钱包',
+        anonymous: '匿名登录',
+        nickname: '输入昵称',
+        nicknameOnce: '为该钱包设置昵称（仅此一次）',
+        enter: '进入游戏',
+        lobby: '游戏大厅',
+        online: '在线人数',
+        drawGuess: '你画我猜',
+        enterGame: '进入游戏',
+        existingRooms: '已有房间 · 快速进入',
+        joinByCode: '输入房间号加入',
+        room: '房间',
+        leaveRoom: '退出房间',
+        playerList: '玩家列表',
+        start: '开始',
+        confirmed: '已确认',
+        chat: '聊天',
+        inputMsg: '输入消息...',
+        send: '发送',
+        ready: '准备',
+        gameState: '游戏状态',
+        painter: '画家',
+        time: '时间',
+        sec: '秒',
+        rounds: '轮数',
+        round: ' 轮',
+        currentWord: '当前词语',
+        category: '类别',
+        scoreboard: '积分榜',
+        guessChat: '猜词 / 聊天',
+        inputAnswer: '输入答案...',
+        painterDrawing: '画家正在作画，请根据下方类别提示猜词',
+        roundEnd: '回合结束',
+        correctAnswer: '正确答案',
+        nextRoundIn: '秒后进入下一轮...',
+        gameOver: '游戏结束',
+        finalRank: '最终排名',
+        playAgain: '再来一局',
+        backLobby: '回到大厅',
+        logout: '登出',
+        logIn: '登录',
+        loggedInAs: '当前账号',
+        notLoggedIn: '未登录',
+        noRooms: '暂无其他房间，创建或输入房间号加入',
+        comingSoon: '即将推出',
+        youGotIt: '你猜对了！',
+        someoneGotIt: '猜对了',
+        xx: 'xx',
+        noWallet: '未检测到钱包',
+        installWallet: '请安装以下任一扩展后刷新页面，再点击「连接钱包」将自动弹窗连接',
+        cancel: '取消',
+        brush: '画笔',
+        eraser: '橡皮',
+        clear: '清空',
+        roomColon: '房间',
+        roundNum: '第 ',
+        noPlayers: '暂无玩家',
+        notConfirmed: '未确认',
+        countdownTip: '剩余 {{n}} 秒，未按「开始」将被移出房间',
+        cancelReady: '取消准备',
+        noMsg: '暂无消息',
+        roomPeople: '房间 {{id}} · {{n}} 人',
+        quickEnter: '快速进入',
+        promptRoomCode: '请输入房间号（4位数字）',
+        invalidRoomCode: '房间号必须是4位数字',
+        gameStartedNoJoin: '游戏已开始，无法加入该房间',
+        timeoutKicked: '超时未按「开始」，已移出房间',
+        rank: '第{{n}}名',
+        notReady: '未准备',
+        nicknameRequired: '请输入昵称',
+        nicknameWalletOnce: '请为该钱包输入昵称（仅需设置一次）',
+        connectFailed: '连接失败',
+        noPhantom: '未检测到 Phantom，请先安装扩展\nhttps://phantom.app',
+        noSolflare: '未检测到 Solflare，请先安装扩展\nhttps://solflare.com',
+        gameUndercover: '谁是卧底',
+        gameQuiz: '快速问答',
+        drawGuessRules: '【你画我猜】\n· 每局轮流一人当画家，其他人猜词。\n· 画家根据系统给出的词语在画布上作画，猜词方根据类别提示输入答案。\n· 先猜对者得分更高；画家根据猜对人数得分。\n· 回合时间结束或全员猜对后进入下一轮，轮数 = 人数×3。',
+        undercoverRules: '【谁是卧底】\n即将推出，敬请期待。',
+        quizRules: '【快速问答】\n即将推出，敬请期待。'
+      },
+      en: {
+        title: 'Draw & Guess · Online',
+        loginType: 'Login',
+        connectWallet: 'Connect Wallet',
+        anonymous: 'Anonymous',
+        nickname: 'Nickname',
+        nicknameOnce: 'Set nickname for this wallet (once only)',
+        enter: 'Enter',
+        lobby: 'Lobby',
+        online: 'Online',
+        drawGuess: 'Draw & Guess',
+        enterGame: 'Enter Game',
+        existingRooms: 'Rooms · Quick Join',
+        joinByCode: 'Join by room code',
+        room: 'Room',
+        leaveRoom: 'Leave',
+        playerList: 'Players',
+        start: 'Start',
+        confirmed: 'Confirmed',
+        chat: 'Chat',
+        inputMsg: 'Type a message...',
+        send: 'Send',
+        ready: 'Ready',
+        gameState: 'Game',
+        painter: 'Painter',
+        time: 'Time',
+        sec: 's',
+        rounds: 'Rounds',
+        round: '',
+        currentWord: 'Word',
+        category: 'Category',
+        scoreboard: 'Score',
+        guessChat: 'Guess / Chat',
+        inputAnswer: 'Your guess...',
+        painterDrawing: 'The painter is drawing. Guess from the category below.',
+        roundEnd: 'Round Over',
+        correctAnswer: 'Answer',
+        nextRoundIn: 'Next round in a few seconds...',
+        gameOver: 'Game Over',
+        finalRank: 'Final Ranking',
+        playAgain: 'Play Again',
+        backLobby: 'Back to Lobby',
+        logout: 'Log out',
+        logIn: 'Log in',
+        loggedInAs: 'Logged in as',
+        notLoggedIn: 'Not logged in',
+        noRooms: 'No rooms yet. Create or enter a code.',
+        comingSoon: 'Coming soon',
+        youGotIt: 'You got it!',
+        someoneGotIt: 'got it',
+        xx: 'xx',
+        noWallet: 'No wallet detected',
+        installWallet: 'Install Phantom or Solflare, refresh the page, then click Connect Wallet.',
+        cancel: 'Cancel',
+        brush: 'Brush',
+        eraser: 'Eraser',
+        clear: 'Clear',
+        roomColon: 'Room',
+        roundNum: 'Round ',
+        noPlayers: 'No players yet',
+        notConfirmed: 'Not confirmed',
+        countdownTip: '{{n}}s left. Press Start or you will be removed.',
+        cancelReady: 'Cancel ready',
+        noMsg: 'No messages',
+        roomPeople: 'Room {{id}} · {{n}}',
+        quickEnter: 'Join',
+        promptRoomCode: 'Enter room code (4 digits)',
+        invalidRoomCode: 'Room code must be 4 digits',
+        gameStartedNoJoin: 'Game has started. Cannot join.',
+        timeoutKicked: 'Timeout. You were removed from the room.',
+        rank: '{{n}}',
+        notReady: 'Not ready',
+        nicknameRequired: 'Please enter nickname',
+        nicknameWalletOnce: 'Please set a nickname for this wallet (once only)',
+        connectFailed: 'Connection failed',
+        noPhantom: 'Phantom not found. Install: https://phantom.app',
+        noSolflare: 'Solflare not found. Install: https://solflare.com',
+        gameUndercover: 'Undercover',
+        gameQuiz: 'Quick Quiz',
+        drawGuessRules: '【Draw & Guess】\n· Each round one player is the painter, others guess.\n· The painter draws the word given by the game; guessers type answers based on the category.\n· Earlier correct guesses score more; the painter scores by how many guessed correctly.\n· Round ends when time runs out or everyone guessed. Total rounds = players × 3.',
+        undercoverRules: '【Undercover】\nComing soon.',
+        quizRules: '【Quick Quiz】\nComing soon.'
+      }
+    }
+    function t(k, vars) {
+      var s = (i18n[lang] && i18n[lang][k]) || i18n.zh[k] || k
+      if (vars && typeof s === 'string') {
+        Object.keys(vars).forEach(function (key) { s = s.replace(new RegExp('\\{\\{' + key + '\\}\\}', 'g'), vars[key]) })
+      }
+      return s
+    }
+    function getCategoryLabel() {
+      return (lang === 'en' && currentWordObj && currentWordObj.cat_en) ? currentWordObj.cat_en : wordCategory
+    }
+    function updateRoundSuffix() {
+      var suffix = lang === 'en' ? '' : ' \u8f6e'
+      var el = document.getElementById('round-suffix')
+      if (el) el.textContent = suffix
+      var headerEl = document.getElementById('game-header-round-suffix')
+      if (headerEl) headerEl.textContent = suffix
+    }
+
+    function getCategoryDisplayForGuesser() {
+      if (currentWordObj && currentWordObj.cat_zh && currentWordObj.cat_en) {
+        return '类别：' + currentWordObj.cat_zh + ' / Category: ' + currentWordObj.cat_en
+      }
+      return t('category') + '：' + getCategoryLabel()
+    }
+    function setLang(l) {
+      lang = l
+      localStorage.setItem('game_lang', l)
+      applyI18n()
+    }
+    function toggleLang() {
+      setLang(lang === 'zh' ? 'en' : 'zh')
+    }
+    function applyI18n() {
+      var key
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        key = el.getAttribute('data-i18n')
+        if (key) el.textContent = t(key)
+      })
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+        key = el.getAttribute('data-i18n-placeholder')
+        if (key) el.placeholder = t(key)
+      })
+      var langBtn = document.getElementById('btn-lang')
+      if (langBtn) {
+        langBtn.textContent = lang === 'zh' ? 'EN' : '中文'
+        langBtn.onclick = toggleLang
+      }
+      if (walletAddress) {
+        var ws = document.getElementById('wallet-status')
+        if (ws && !ws.classList.contains('hidden')) ws.innerHTML = '✅ ' + (lang === 'en' ? 'Connected: ' : '已连接: ') + walletAddress.slice(0, 4) + '...' + walletAddress.slice(-4) + ' <button type="button" onclick="logoutWallet()" style="margin-left:0.5rem;padding:0.2rem 0.5rem;font-size:0.8rem;background:var(--surface-hover)">' + t('logout') + '</button>'
+      }
+      if (typeof updateLobbySyncTip === 'function') updateLobbySyncTip()
+      if (typeof updateRoundSuffix === 'function') updateRoundSuffix()
+      document.title = lang === 'en' ? 'Draw & Guess · Online' : '你画我猜 · 线上版'
+    }
+
+    // ========== 状态管理 ==========
+    let currentPage = 'login'
+    let loginType = 'anonymous'
+    let playerName = ''
+    let playerId = ''
+    let walletAddress = ''
+    let walletProvider = null
+    let roomId = ''
+    let isReady = false
+    let isPainter = false
+    let roundTime = 45
+    let currentRound = 2
+    let maxRounds = 8
+    let painterWord = 'CAT'
+    let currentWordObj = null
+    let wordHint = 'C _ T'
+    let tool = 'brush'
+    let brushColor = '#ffffff'
+    let brushSize = 4
+    let drawing = false
+    let lastX = 0
+    let lastY = 0
+    let roomPlayers = []
+    let roundTimer = null
+    let roomPollTimer = null
+    let gamePollTimer = null
+    let canvasResizeHandler = null
+    let gameWordSeed = '' // 本局词语乱序种子，每局不同
+
+    // 通过同一服务器打开时用 API 同步，手机和电脑可同房间；file:// 仍用 localStorage
+    const useRoomApi = typeof location !== 'undefined' && location.protocol !== 'file:' && location.host
+    const apiBase = useRoomApi ? (location.origin + '/api') : ''
+
+    function getRoomPlayers(roomId) {
+      const key = `room_${roomId}_players`
+      const data = localStorage.getItem(key)
+      return data ? JSON.parse(data) : []
+    }
+
+    function saveRoomPlayers(roomId, players) {
+      const key = `room_${roomId}_players`
+      localStorage.setItem(key, JSON.stringify(players))
+      window.dispatchEvent(new StorageEvent('storage', { key, newValue: JSON.stringify(players) }))
+    }
+
+    async function getRoomPlayersAsync(roomId) {
+      if (apiBase) {
+        try {
+          const r = await fetch(apiBase + '/rooms/' + encodeURIComponent(roomId) + '/players')
+          if (r.ok) return await r.json()
+        } catch (e) {}
+      }
+      return getRoomPlayers(roomId)
+    }
+
+    async function saveRoomPlayersAsync(roomId, players) {
+      if (apiBase) {
+        try {
+          var r = await fetch(apiBase + '/rooms/' + encodeURIComponent(roomId) + '/players', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(players)
+          })
+          return r.ok
+        } catch (e) { return false }
+      }
+      saveRoomPlayers(roomId, players)
+      return true
+    }
+
+    async function getRoomStateAsync(roomId) {
+      if (apiBase) {
+        try {
+          const r = await fetch(apiBase + '/rooms/' + encodeURIComponent(roomId) + '/state')
+          if (r.ok) return await r.json()
+        } catch (e) {}
+      }
+      return { status: 'waiting' }
+    }
+
+    async function setRoomStateAsync(roomId, state) {
+      if (apiBase) {
+        try {
+          await fetch(apiBase + '/rooms/' + encodeURIComponent(roomId) + '/state', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(state)
+          })
+        } catch (e) {}
+      }
+    }
+
+    async function confirmStartAsync(roomId, playerId) {
+      if (apiBase) {
+        try {
+          await fetch(apiBase + '/rooms/' + encodeURIComponent(roomId) + '/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: playerId })
+          })
+        } catch (e) {}
+      }
+    }
+
+    async function postGuessAsync(roomId, body) {
+      if (apiBase) {
+        try {
+          const r = await fetch(apiBase + '/rooms/' + encodeURIComponent(roomId) + '/guess', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          })
+          if (r.ok) return await r.json()
+        } catch (e) {}
+      }
+      return null
+    }
+
+    async function addPlayerToRoom(roomId, player) {
+      if (apiBase) {
+        var state = await getRoomStateAsync(roomId)
+        if (state && state.status === 'playing') return null
+      }
+      const players = await getRoomPlayersAsync(roomId)
+      if (!players.find(p => p.id === player.id)) {
+        if (apiBase) {
+          var state2 = await getRoomStateAsync(roomId)
+          if (state2 && state2.status === 'playing') return null
+        }
+        players.push(player)
+        var ok = await saveRoomPlayersAsync(roomId, players)
+        if (apiBase && !ok) return null
+      }
+      return players
+    }
+
+    async function updatePlayerReady(roomId, playerId, ready) {
+      const players = await getRoomPlayersAsync(roomId)
+      const player = players.find(p => p.id === playerId)
+      if (player) {
+        player.ready = ready
+        await saveRoomPlayersAsync(roomId, players)
+      }
+      return players
+    }
+
+    async function removePlayerFromRoom(roomId, playerId) {
+      const players = await getRoomPlayersAsync(roomId)
+      const filtered = players.filter(p => p.id !== playerId)
+      await saveRoomPlayersAsync(roomId, filtered)
+      return filtered
+    }
+
+    window.addEventListener('storage', (e) => {
+      if (e.key && e.key.startsWith('room_') && e.key.endsWith('_players')) {
+        const roomIdFromKey = e.key.replace('room_', '').replace('_players', '')
+        if (roomIdFromKey === roomId && currentPage === 'room') {
+          getRoomPlayersAsync(roomId).then((p) => { roomPlayers = p; updateRoomPage() })
+        }
+        if (currentPage === 'lobby') {
+          updateExistingRoomsList()
+          updateOnlineCount()
+        }
+      }
+    })
+
+    // ========== 钱包连接 ==========
+    function selectLoginType(type) {
+      loginType = type
+      const btnWallet = document.getElementById('btn-wallet')
+      const btnAnonymous = document.getElementById('btn-anonymous')
+      const walletStatus = document.getElementById('wallet-status')
+      
+      if (type === 'wallet') {
+        btnWallet.style.background = 'var(--primary)'
+        btnAnonymous.style.background = 'var(--surface-hover)'
+        if (!walletAddress) {
+          // 自动唤起已安装的钱包扩展弹窗
+          autoConnectWallet()
+        }
+      } else {
+        btnAnonymous.style.background = 'var(--primary)'
+        btnWallet.style.background = 'var(--surface-hover)'
+        walletStatus.classList.add('hidden')
+      }
+    }
+
+    /** 自动检测并唤起 Phantom 或 Solflare 扩展弹窗进行连接 */
+    async function autoConnectWallet() {
+      let provider = null
+      let walletType = ''
+      // 优先 Phantom，其次 Solflare
+      if (typeof window.solana !== 'undefined' && window.solana.isPhantom) {
+        provider = window.solana
+        walletType = 'phantom'
+      } else if (typeof window.solflare !== 'undefined') {
+        provider = window.solflare
+        walletType = 'solflare'
+      }
+
+      if (!provider) {
+        showWalletModal()
+        return
+      }
+
+      try {
+        // 直接调用 connect()，会弹出扩展自带连接窗口
+        const response = await provider.connect()
+        walletAddress = response.publicKey.toString()
+        walletProvider = provider
+        loginType = 'wallet'
+        playerName = getAddressShort(walletAddress)
+        playerId = walletAddress.slice(0, 16)
+        saveWalletToStorage(walletAddress, walletType, playerId)
+        if (currentPage === 'lobby') updateLobbyAccount()
+      } catch (err) {
+        console.error('钱包连接失败:', err)
+        if (err.code !== 4001 && err.code !== -32603) {
+          alert(t('connectFailed') + ': ' + (err.message || (lang === 'en' ? 'User cancelled' : '用户取消')))
+        }
+      }
+    }
+
+    function saveWalletToStorage(address, type, pid) {
+      if (address) {
+        var id = pid || address.slice(0, 16)
+        localStorage.setItem('walletAddress', address)
+        localStorage.setItem('walletType', type || 'phantom')
+        localStorage.setItem('playerId', id)
+        sessionStorage.setItem('walletAddress', address)
+        sessionStorage.setItem('walletType', type || 'phantom')
+        sessionStorage.setItem('playerId', id)
+      }
+    }
+
+    function clearWalletStorage() {
+      localStorage.removeItem('walletAddress')
+      localStorage.removeItem('walletType')
+      localStorage.removeItem('playerId')
+      sessionStorage.removeItem('walletAddress')
+      sessionStorage.removeItem('walletType')
+      sessionStorage.removeItem('playerId')
+    }
+
+    function showWalletModal() {
+      document.getElementById('wallet-modal').classList.remove('hidden')
+    }
+
+    function closeWalletModal() {
+      document.getElementById('wallet-modal').classList.add('hidden')
+    }
+
+    /** 用户手动选择 Phantom 或 Solflare 时调用（弹窗内点击） */
+    async function connectWallet(walletType) {
+      try {
+        let provider = null
+
+        if (walletType === 'phantom') {
+          if (typeof window.solana !== 'undefined' && window.solana.isPhantom) {
+            provider = window.solana
+          } else {
+            alert(t('noPhantom'))
+            closeWalletModal()
+            return
+          }
+        } else if (walletType === 'solflare') {
+          if (typeof window.solflare !== 'undefined') {
+            provider = window.solflare
+          } else {
+            alert(t('noSolflare'))
+            closeWalletModal()
+            return
+          }
+        }
+
+        if (!provider) {
+          closeWalletModal()
+          return
+        }
+
+        const response = await provider.connect()
+        walletAddress = response.publicKey.toString()
+        walletProvider = provider
+        loginType = 'wallet'
+        playerName = getAddressShort(walletAddress)
+        playerId = walletAddress.slice(0, 16)
+        saveWalletToStorage(walletAddress, walletType, playerId)
+        closeWalletModal()
+        if (currentPage === 'lobby') updateLobbyAccount()
+      } catch (err) {
+        console.error('钱包连接失败:', err)
+        alert(t('connectFailed') + ': ' + (err.message || (lang === 'en' ? 'User cancelled' : '用户取消')))
+        closeWalletModal()
+      }
+    }
+
+    // 检查是否已连接钱包（刷新后恢复）
+    async function checkWalletConnection() {
+      var savedAddress = localStorage.getItem('walletAddress') || sessionStorage.getItem('walletAddress')
+      var savedType = localStorage.getItem('walletType') || sessionStorage.getItem('walletType')
+      if (!savedAddress) return
+      walletAddress = savedAddress
+      loginType = 'wallet'
+      playerName = getAddressShort(walletAddress)
+      playerId = localStorage.getItem('playerId') || sessionStorage.getItem('playerId') || savedAddress.slice(0, 16)
+      try {
+        var provider = null
+        if ((savedType || 'phantom') === 'phantom' && typeof window.solana !== 'undefined' && window.solana.isPhantom) provider = window.solana
+        else if ((savedType || 'solflare') === 'solflare' && typeof window.solflare !== 'undefined') provider = window.solflare
+        if (provider && typeof provider.connect === 'function') {
+          var opts = (provider.connect.length >= 1) ? { onlyIfTrusted: true } : {}
+          await provider.connect(opts).catch(function () {})
+          walletProvider = provider
+        }
+      } catch (e) {}
+    }
+
+    function getAddressShort(addr) {
+      return addr ? (addr.slice(0, 6) + '...' + addr.slice(-4)) : ''
+    }
+
+    function getNicknameForWallet(address) {
+      if (!address) return null
+      return localStorage.getItem('nickname_' + address)
+    }
+
+    function setNicknameForWallet(address, name) {
+      if (!address || !name) return
+      if (!localStorage.getItem('nickname_' + address)) {
+        localStorage.setItem('nickname_' + address, name)
+      }
+    }
+
+    /** 仅恢复变量，不切换页面 */
+    function restoreLoginState() {
+      if (walletAddress) {
+        playerName = getAddressShort(walletAddress)
+        playerId = localStorage.getItem('playerId') || sessionStorage.getItem('playerId') || walletAddress.slice(0, 16)
+        sessionStorage.setItem('playerName', playerName)
+        sessionStorage.setItem('playerId', playerId)
+        sessionStorage.setItem('loginType', 'wallet')
+        return
+      }
+      var lastName = localStorage.getItem('lastPlayerName')
+      var lastId = localStorage.getItem('lastPlayerId')
+      if (lastName && lastId) {
+        playerName = lastName
+        playerId = lastId
+        loginType = localStorage.getItem('lastLoginType') || 'anonymous'
+        sessionStorage.setItem('playerName', playerName)
+        sessionStorage.setItem('playerId', playerId)
+        sessionStorage.setItem('loginType', loginType)
+      }
+    }
+
+    function updateLobbyAccount() {
+      var conn = document.getElementById('lobby-account-connected')
+      var btns = document.getElementById('lobby-account-buttons')
+      var nameEl = document.getElementById('lobby-account-name')
+      if (!conn || !btns) return
+      if (playerName) {
+        conn.style.display = 'block'
+        btns.style.display = 'none'
+        if (nameEl) nameEl.textContent = playerName
+      } else {
+        conn.style.display = 'none'
+        btns.style.display = 'flex'
+      }
+    }
+
+    async function lobbyConnectWallet() {
+      await autoConnectWallet()
+      if (!walletAddress) return
+      playerName = getAddressShort(walletAddress)
+      playerId = walletAddress.slice(0, 16)
+      sessionStorage.setItem('playerName', playerName)
+      sessionStorage.setItem('playerId', playerId)
+      localStorage.setItem('lastPlayerName', playerName)
+      localStorage.setItem('lastPlayerId', playerId)
+      localStorage.setItem('lastLoginType', 'wallet')
+      updateLobbyAccount()
+    }
+
+    function lobbyAnonymous() {
+      playerName = 'Guest_' + Math.random().toString(36).slice(2, 6)
+      playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9)
+      loginType = 'anonymous'
+      sessionStorage.setItem('playerName', playerName)
+      sessionStorage.setItem('playerId', playerId)
+      localStorage.setItem('lastPlayerName', playerName)
+      localStorage.setItem('lastPlayerId', playerId)
+      localStorage.setItem('lastLoginType', loginType)
+      updateLobbyAccount()
+    }
+
+    function lobbyLogout() {
+      walletAddress = ''
+      walletProvider = null
+      playerName = ''
+      playerId = ''
+      loginType = 'anonymous'
+      clearWalletStorage()
+      localStorage.removeItem('lastPlayerName')
+      localStorage.removeItem('lastPlayerId')
+      localStorage.removeItem('lastLoginType')
+      updateLobbyAccount()
+    }
+
+    function showGameRules(gameKey) {
+      var titleMap = { 'draw-guess': 'drawGuess', 'undercover': 'gameUndercover', 'quiz': 'gameQuiz' }
+      var bodyMap = { 'draw-guess': 'drawGuessRules', 'undercover': 'undercoverRules', 'quiz': 'quizRules' }
+      var title = document.getElementById('game-rules-title')
+      var body = document.getElementById('game-rules-body')
+      if (title && body) {
+        title.textContent = t(titleMap[gameKey] || 'drawGuess')
+        body.textContent = t(bodyMap[gameKey] || 'drawGuessRules')
+      }
+      document.getElementById('game-rules-modal').classList.remove('hidden')
+    }
+
+    function closeGameRulesModal() {
+      document.getElementById('game-rules-modal').classList.add('hidden')
+    }
+
+    function logoutWallet() {
+      walletAddress = ''
+      walletProvider = null
+      loginType = 'anonymous'
+      playerId = sessionStorage.getItem('playerId') || 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      clearWalletStorage()
+      var walletStatus = document.getElementById('wallet-status')
+      var btnWallet = document.getElementById('btn-wallet')
+      var btnAnonymous = document.getElementById('btn-anonymous')
+      if (walletStatus) {
+        walletStatus.classList.add('hidden')
+        walletStatus.classList.remove('connected')
+        walletStatus.innerHTML = ''
+      }
+      if (btnWallet) btnWallet.style.background = 'var(--surface-hover)'
+      if (btnAnonymous) btnAnonymous.style.background = 'var(--primary)'
+    }
+
+    // ========== 页面切换 ==========
+    function showPage(pageId) {
+      document.querySelectorAll('[id^="page-"]').forEach(el => el.classList.add('hidden'))
+      document.getElementById(`page-${pageId}`).classList.remove('hidden')
+      currentPage = pageId
+    }
+
+    // ========== 登录页 ==========
+    async function handleEnter() {
+      var nicknameInput = document.getElementById('input-nickname')
+      var nickname = (nicknameInput && nicknameInput.value) ? nicknameInput.value.trim() : ''
+      if (loginType === 'wallet' && walletAddress) {
+        var existing = getNicknameForWallet(walletAddress)
+        if (existing) {
+          nickname = existing
+        } else if (!nickname) {
+          alert(t('nicknameWalletOnce'))
+          return
+        } else {
+          setNicknameForWallet(walletAddress, nickname)
+        }
+      } else if (!nickname) {
+        alert(t('nicknameRequired'))
+        return
+      }
+
+      if (loginType === 'wallet' && !walletAddress) {
+        await autoConnectWallet()
+        if (!walletAddress) return
+        nickname = nicknameInput ? nicknameInput.value.trim() : ''
+        if (!nickname) {
+          alert(t('nicknameWalletOnce'))
+          return
+        }
+        setNicknameForWallet(walletAddress, nickname)
+      }
+
+      playerName = nickname
+      if (!playerId) {
+        playerId = 'player_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      }
+
+      sessionStorage.setItem('playerName', playerName)
+      sessionStorage.setItem('playerId', playerId)
+      sessionStorage.setItem('loginType', loginType)
+      localStorage.setItem('lastPlayerName', playerName)
+      localStorage.setItem('lastPlayerId', playerId)
+      localStorage.setItem('lastLoginType', loginType)
+
+      updateOnlineCount()
+      showPage('lobby')
+      updateLobbySyncTip()
+      updateExistingRoomsList()
+    }
+
+    async function updateOnlineCount() {
+      let total = 0
+      if (apiBase) {
+        try {
+          const r = await fetch(apiBase + '/rooms')
+          if (r.ok) {
+            const list = await r.json()
+            list.forEach((x) => { total += x.playerCount || 0 })
+          }
+        } catch (e) {}
+      }
+      if (total === 0) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith('room_') && key.endsWith('_players')) {
+            const players = JSON.parse(localStorage.getItem(key) || '[]')
+            total += players.length
+          }
+        }
+      }
+      const el = document.getElementById('online-count')
+      if (el) el.textContent = total || 1
+    }
+
+    /** 获取所有已有玩家的房间（用于大厅「快速进入」） */
+    async function getExistingRooms() {
+      if (apiBase) {
+        try {
+          const r = await fetch(apiBase + '/rooms')
+          if (r.ok) return await r.json()
+        } catch (e) {}
+      }
+      const list = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith('room_') && key.endsWith('_players')) {
+          const rid = key.replace('room_', '').replace('_players', '')
+          const players = JSON.parse(localStorage.getItem(key) || '[]')
+          if (players.length > 0) list.push({ roomId: rid, playerCount: players.length })
+        }
+      }
+      return list.sort((a, b) => b.playerCount - a.playerCount)
+    }
+
+    function updateLobbySyncTip() {
+      var el = document.getElementById('lobby-sync-tip')
+      if (!el) return
+      el.style.display = 'none'
+    }
+
+    /** 刷新大厅「已有房间」列表 */
+    async function updateExistingRoomsList() {
+      const container = document.getElementById('existing-rooms-list')
+      if (!container) return
+      const list = await getExistingRooms()
+      if (list.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; margin: 0">' + t('noRooms') + '</p>'
+        return
+      }
+      container.innerHTML = list.map(function (r) {
+        return '<div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--surface-hover)"><span>' + t('roomPeople', { id: r.roomId, n: r.playerCount }) + '</span><button type="button" onclick="quickEnterRoom(\'' + r.roomId + '\')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem">' + t('quickEnter') + '</button></div>'
+      }).join('')
+    }
+
+    /** 从大厅快速进入指定房间 */
+    function quickEnterRoom(id) {
+      joinRoomById(id)
+    }
+
+    // ========== 大厅页 ==========
+    function enterGame(gameId) {
+      if (!playerName) {
+        alert(lang === 'en' ? 'Please connect wallet or use Anonymous first.' : '请先连接钱包或匿名登录。')
+        return
+      }
+      if (gameId === 'draw-guess') {
+        roomId = Math.floor(Math.random() * 9000 + 1000).toString()
+        joinRoomById(roomId)
+      }
+    }
+
+    function joinRoom() {
+      if (!playerName) {
+        alert(lang === 'en' ? 'Please connect wallet or use Anonymous first.' : '请先连接钱包或匿名登录。')
+        return
+      }
+      const code = prompt(t('promptRoomCode'))
+      if (code && /^\d{4}$/.test(code)) {
+        joinRoomById(code)
+      } else if (code) {
+        alert(t('invalidRoomCode'))
+      }
+    }
+
+    async function joinRoomById(id) {
+      roomId = id
+      document.getElementById('room-id').textContent = roomId
+      document.getElementById('game-room-id').textContent = roomId
+
+      var state = await getRoomStateAsync(roomId)
+      if (state && state.status === 'playing') {
+        alert(t('gameStartedNoJoin'))
+        roomId = ''
+        return
+      }
+
+      const player = {
+        id: playerId,
+        name: playerName,
+        ready: false,
+        score: 0,
+        walletAddress: walletAddress || null
+      }
+      roomPlayers = await addPlayerToRoom(roomId, player)
+      if (!roomPlayers) {
+        alert(t('gameStartedNoJoin'))
+        roomId = ''
+        return
+      }
+
+      showPage('room')
+      updateRoomPage(await getRoomStateAsync(roomId))
+      if (roomPollTimer) clearInterval(roomPollTimer)
+      if (countdownTimer) clearInterval(countdownTimer)
+      roomPollTimer = setInterval(async () => {
+        if (currentPage !== 'room' || !roomId) return
+        roomPlayers = await getRoomPlayersAsync(roomId)
+        if (roomPlayers.every(function (p) { return p.id !== playerId })) {
+          if (roomPollTimer) { clearInterval(roomPollTimer); roomPollTimer = null }
+          if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+          alert(t('timeoutKicked'))
+          goToLobby()
+          return
+        }
+        var state = await getRoomStateAsync(roomId)
+        updateRoomPage(state)
+        if (state && state.status === 'playing') {
+          if (roomPollTimer) { clearInterval(roomPollTimer); roomPollTimer = null }
+          if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+          startGame(state)
+          return
+        }
+        await updateCountdown(state)
+      }, 500)
+      countdownTimer = setInterval(async function () {
+        if (currentPage !== 'room' || !roomId) return
+        var state = await getRoomStateAsync(roomId)
+        var hasCountdown = await updateCountdown(state)
+        roomPlayers = await getRoomPlayersAsync(roomId)
+        if (state && state.countdownEndTime && state.confirmedPlayerIds && state.status === 'waiting') {
+          var allConfirmed = roomPlayers.length >= 2 && roomPlayers.every(function (p) { return state.confirmedPlayerIds.indexOf(p.id) >= 0 })
+          if (allConfirmed) {
+            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+            var kept = roomPlayers.slice()
+            await setRoomStateAsync(roomId, { countdownEndTime: null, confirmedPlayerIds: [] })
+            var painterIndex = Math.floor(Math.random() * kept.length)
+            var painterId = kept[painterIndex].id
+            var maxR = kept.length * 3
+            gameWordSeed = roomId + '-' + Date.now()
+            var dailyWords = getDailyWords(gameWordSeed)
+            var firstWord = dailyWords[0]
+            await setRoomStateAsync(roomId, { status: 'playing', gameWordSeed: gameWordSeed, painterId: painterId, wordIndex: 0, word: firstWord.en, wordCategory: firstWord.cat_zh, wordCategoryEn: firstWord.cat_en, currentRound: 1, maxRounds: maxR })
+            startGame({ status: 'playing', gameWordSeed: gameWordSeed, painterId: painterId, wordIndex: 0, word: firstWord.en, wordCategory: firstWord.cat_zh, wordCategoryEn: firstWord.cat_en, currentRound: 1, maxRounds: maxR })
+            return
+          }
+        }
+        if (!hasCountdown && state && state.status === 'waiting' && state.countdownEndTime && state.countdownEndTime <= Date.now()) {
+          var confirmedIds = state.confirmedPlayerIds || []
+          var kept = roomPlayers.filter(function (p) { return confirmedIds.indexOf(p.id) >= 0 })
+          await saveRoomPlayersAsync(roomId, kept)
+          roomPlayers = kept
+          await setRoomStateAsync(roomId, { countdownEndTime: null, confirmedPlayerIds: [] })
+          if (kept.length >= 2) {
+            var painterIndex = Math.floor(Math.random() * kept.length)
+            var painterId = kept[painterIndex].id
+            var maxR = kept.length * 3
+            gameWordSeed = roomId + '-' + Date.now()
+            var dailyWords = getDailyWords(gameWordSeed)
+            var firstWord = dailyWords[0]
+            await setRoomStateAsync(roomId, { status: 'playing', gameWordSeed: gameWordSeed, painterId: painterId, wordIndex: 0, word: firstWord.en, wordCategory: firstWord.cat_zh, wordCategoryEn: firstWord.cat_en, currentRound: 1, maxRounds: maxR })
+            startGame({ status: 'playing', gameWordSeed: gameWordSeed, painterId: painterId, wordIndex: 0, word: firstWord.en, wordCategory: firstWord.cat_zh, wordCategoryEn: firstWord.cat_en, currentRound: 1, maxRounds: maxR })
+          } else {
+            updateRoomPage(await getRoomStateAsync(roomId))
+          }
+        }
+      }, 500)
+    }
+
+    async function goToLobby() {
+      if (roomPollTimer) { clearInterval(roomPollTimer); roomPollTimer = null }
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
+      if (roomId && playerId) {
+        await removePlayerFromRoom(roomId, playerId)
+      }
+      roomId = ''
+      updateOnlineCount()
+      showPage('lobby')
+      updateLobbyAccount()
+      updateLobbySyncTip()
+      updateExistingRoomsList()
+    }
+
+    // ========== 房间页 ==========
+    function updateRoomPage(state) {
+      const list = document.getElementById('player-list')
+      const countEl = document.getElementById('player-count')
+      if (!list || !countEl) return
+      countEl.textContent = roomPlayers.length
+      var inCountdown = state && state.status === 'waiting' && (state.countdownRemaining > 0 || (state.countdownEndTime && (state.countdownEndTime - Date.now()) > 0))
+      var confirmedIds = (state && state.confirmedPlayerIds) ? state.confirmedPlayerIds : []
+
+      if (roomPlayers.length === 0) {
+        list.innerHTML = '<li style="padding: 1rem; text-align: center; color: var(--text-muted)">' + t('noPlayers') + '</li>'
+      } else {
+        list.innerHTML = roomPlayers.map(function (p) {
+          var right = inCountdown ? (confirmedIds.indexOf(p.id) >= 0 ? '✅ ' + t('confirmed') : '❌ ' + t('notConfirmed')) : (p.ready ? '✅ ' + t('ready') : '❌ ' + t('notReady'))
+          return '<li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--surface-hover)"><span>' + p.name + (p.walletAddress ? ' 💼' : '') + '</span><span>' + right + '</span></li>'
+        }).join('')
+      }
+    }
+
+    var countdownTimer = null
+
+    async function updateCountdown(state) {
+      const countdownEl = document.getElementById('countdown-text')
+      const confirmArea = document.getElementById('confirm-area')
+      const btnStart = document.getElementById('btn-start')
+      const confirmDone = document.getElementById('confirm-done')
+      if (!countdownEl) return
+
+      if (state && state.status === 'waiting' && (state.countdownRemaining !== undefined || (state.countdownEndTime && (state.countdownEndTime - Date.now()) > 0))) {
+        var remaining = state.countdownRemaining
+        if (remaining === undefined && state.countdownEndTime) remaining = Math.max(0, Math.floor((state.countdownEndTime - Date.now()) / 1000))
+        if (remaining !== undefined && remaining > 0) {
+          countdownEl.style.display = 'block'
+          countdownEl.textContent = t('countdownTip', { n: remaining })
+          if (confirmArea && btnStart) {
+            var confirmed = (state.confirmedPlayerIds || []).indexOf(playerId) >= 0
+            confirmArea.style.display = 'block'
+            btnStart.style.display = confirmed ? 'none' : 'inline-block'
+            if (confirmDone) confirmDone.style.display = confirmed ? 'inline' : 'none'
+          }
+          return true
+        } else {
+          countdownEl.style.display = 'none'
+          if (confirmArea) confirmArea.style.display = 'none'
+          return false
+        }
+      } else {
+        countdownEl.style.display = 'none'
+        if (confirmArea) confirmArea.style.display = 'none'
+        return false
+      }
+    }
+
+    async function confirmStart() {
+      await confirmStartAsync(roomId, playerId)
+      roomPlayers = await getRoomPlayersAsync(roomId)
+      var state = await getRoomStateAsync(roomId)
+      updateRoomPage(state)
+      await updateCountdown(state)
+    }
+
+    async function toggleReady() {
+      isReady = !isReady
+      document.getElementById('btn-ready').textContent = isReady ? t('cancelReady') : t('ready')
+      await updatePlayerReady(roomId, playerId, isReady)
+      roomPlayers = await getRoomPlayersAsync(roomId)
+
+      var state = await getRoomStateAsync(roomId)
+      var now = Date.now()
+      if (isReady && (!state.countdownEndTime || state.countdownEndTime < now)) {
+        await setRoomStateAsync(roomId, { countdownEndTime: now + 30000, confirmedPlayerIds: [playerId] })
+      }
+      state = await getRoomStateAsync(roomId)
+      updateRoomPage(state)
+      await updateCountdown(state)
+    }
+
+    function sendChat() {
+      const input = document.getElementById('chat-input')
+      const text = input.value.trim()
+      if (!text) return
+      
+      const messages = document.getElementById('chat-messages')
+      var noMsgZh = '暂无消息'
+      var noMsgEn = 'No messages'
+      if (messages.innerHTML.indexOf(noMsgZh) >= 0 || messages.innerHTML.indexOf(noMsgEn) >= 0) {
+        messages.innerHTML = ''
+      }
+      
+      messages.innerHTML += `<div style="margin-bottom: 0.25rem"><strong>${playerName}:</strong> ${text}</div>`
+      messages.scrollTop = messages.scrollHeight
+      input.value = ''
+    }
+
+    var wordCategory = '动物'
+    var WORD_LIST = [
+      { en: 'Cat', zh: '猫', cat_zh: '动物', cat_en: 'Animal', answers: ['cat', '猫', 'cats'] },
+      { en: 'Dog', zh: '狗', cat_zh: '动物', cat_en: 'Animal', answers: ['dog', '狗', 'dogs'] },
+      { en: 'Bird', zh: '鸟', cat_zh: '动物', cat_en: 'Animal', answers: ['bird', '鸟', 'birds'] },
+      { en: 'Fish', zh: '鱼', cat_zh: '动物', cat_en: 'Animal', answers: ['fish', '鱼'] },
+      { en: 'Tree', zh: '树', cat_zh: '自然', cat_en: 'Nature', answers: ['tree', '树', 'trees'] },
+      { en: 'Sun', zh: '太阳', cat_zh: '自然', cat_en: 'Nature', answers: ['sun', '太阳'] },
+      { en: 'Car', zh: '汽车', cat_zh: '物品', cat_en: 'Object', answers: ['car', '汽车', 'cars'] },
+      { en: 'Book', zh: '书', cat_zh: '物品', cat_en: 'Object', answers: ['book', '书', 'books'] },
+      { en: 'Apple', zh: '苹果', cat_zh: '食物', cat_en: 'Food', answers: ['apple', '苹果', 'apples'] },
+      { en: 'House', zh: '房子', cat_zh: '建筑', cat_en: 'Building', answers: ['house', '房子', 'home', '家'] },
+      { en: 'Water', zh: '水', cat_zh: '自然', cat_en: 'Nature', answers: ['water', '水'] },
+      { en: 'Fire', zh: '火', cat_zh: '自然', cat_en: 'Nature', answers: ['fire', '火'] },
+      { en: 'Moon', zh: '月亮', cat_zh: '自然', cat_en: 'Nature', answers: ['moon', '月亮'] },
+      { en: 'Star', zh: '星星', cat_zh: '自然', cat_en: 'Nature', answers: ['star', '星星', 'stars'] },
+      { en: 'Flower', zh: '花', cat_zh: '植物', cat_en: 'Plant', answers: ['flower', '花', 'flowers'] },
+      { en: 'Mountain', zh: '山', cat_zh: '自然', cat_en: 'Nature', answers: ['mountain', '山', 'hill', '小山'] },
+      { en: 'Rain', zh: '雨', cat_zh: '自然', cat_en: 'Nature', answers: ['rain', '雨'] },
+      { en: 'Snow', zh: '雪', cat_zh: '自然', cat_en: 'Nature', answers: ['snow', '雪'] },
+      { en: 'Elephant', zh: '大象', cat_zh: '动物', cat_en: 'Animal', answers: ['elephant', '大象'] },
+      { en: 'Lion', zh: '狮子', cat_zh: '动物', cat_en: 'Animal', answers: ['lion', '狮子', 'lions'] },
+      { en: 'Tiger', zh: '老虎', cat_zh: '动物', cat_en: 'Animal', answers: ['tiger', '老虎', 'tigers'] },
+      { en: 'Rabbit', zh: '兔子', cat_zh: '动物', cat_en: 'Animal', answers: ['rabbit', '兔子', 'rabbits'] },
+      { en: 'Butterfly', zh: '蝴蝶', cat_zh: '动物', cat_en: 'Animal', answers: ['butterfly', '蝴蝶', 'butterflies'] },
+      { en: 'Bicycle', zh: '自行车', cat_zh: '物品', cat_en: 'Object', answers: ['bicycle', '自行车', 'bike', '单车'] },
+      { en: 'Phone', zh: '手机', cat_zh: '物品', cat_en: 'Object', answers: ['phone', '手机', 'telephone', '电话'] },
+      { en: 'Computer', zh: '电脑', cat_zh: '物品', cat_en: 'Object', answers: ['computer', '电脑', 'pc'] },
+      { en: 'Airplane', zh: '飞机', cat_zh: '交通', cat_en: 'Transport', answers: ['airplane', '飞机', 'plane'] },
+      { en: 'Ship', zh: '船', cat_zh: '交通', cat_en: 'Transport', answers: ['ship', '船', 'boat', '小船'] },
+      { en: 'Bridge', zh: '桥', cat_zh: '建筑', cat_en: 'Building', answers: ['bridge', '桥'] },
+      { en: 'School', zh: '学校', cat_zh: '建筑', cat_en: 'Building', answers: ['school', '学校'] },
+      { en: 'Doctor', zh: '医生', cat_zh: '职业', cat_en: 'Occupation', answers: ['doctor', '医生'] },
+      { en: 'Teacher', zh: '老师', cat_zh: '职业', cat_en: 'Occupation', answers: ['teacher', '老师'] },
+      { en: 'Music', zh: '音乐', cat_zh: '抽象', cat_en: 'Abstract', answers: ['music', '音乐'] },
+      { en: 'Love', zh: '爱', cat_zh: '抽象', cat_en: 'Abstract', answers: ['love', '爱'] },
+      { en: 'Happy', zh: '开心', cat_zh: '情绪', cat_en: 'Emotion', answers: ['happy', '开心', '快乐'] },
+      { en: 'Run', zh: '跑', cat_zh: '动作', cat_en: 'Action', answers: ['run', '跑', 'running'] },
+      { en: 'Eat', zh: '吃', cat_zh: '动作', cat_en: 'Action', answers: ['eat', '吃', 'eating'] },
+      { en: 'Sleep', zh: '睡', cat_zh: '动作', cat_en: 'Action', answers: ['sleep', '睡', 'sleeping'] },
+      { en: 'Ball', zh: '球', cat_zh: '物品', cat_en: 'Object', answers: ['ball', '球', 'balls'] },
+      { en: 'Key', zh: '钥匙', cat_zh: '物品', cat_en: 'Object', answers: ['key', '钥匙', 'keys'] },
+      { en: 'Clock', zh: '钟', cat_zh: '物品', cat_en: 'Object', answers: ['clock', '钟', '时钟', 'watch', '表'] },
+      { en: 'Umbrella', zh: '伞', cat_zh: '物品', cat_en: 'Object', answers: ['umbrella', '伞'] },
+      { en: 'Camera', zh: '相机', cat_zh: '物品', cat_en: 'Object', answers: ['camera', '相机', '照相机'] }
+    ]
+
+    function seedRandom(seed) {
+      var n = 0
+      for (var i = 0; i < seed.length; i++) n = (n << 5) - n + seed.charCodeAt(i) | 0
+      return function () {
+        n = Math.imul(n ^ (n >>> 15), 1 | n)
+        return ((n ^ (n >>> 7)) >>> 0) / 4294967296
+      }
+    }
+
+    function getDailyWords(seed) {
+      var s = seed || new Date().toISOString().slice(0, 10)
+      var rng = seedRandom(s)
+      var list = WORD_LIST.slice()
+      for (var i = list.length - 1; i > 0; i--) {
+        var j = Math.floor(rng() * (i + 1))
+        var t = list[i]; list[i] = list[j]; list[j] = t
+      }
+      return list
+    }
+
+    function getWordByIndex(index) {
+      var list = gameWordSeed ? getDailyWords(gameWordSeed) : getDailyWords()
+      return list[index % list.length] || list[0]
+    }
+
+    function isGuessCorrect(guess, wordObj) {
+      if (!wordObj || !wordObj.answers) return false
+      var g = (guess || '').trim().toLowerCase()
+      if (!g) return false
+      return wordObj.answers.some(function (a) { return (a + '').trim().toLowerCase() === g })
+    }
+
+    function renderGameChat(guesses) {
+      var messages = document.getElementById('game-chat-messages')
+      if (!messages) return
+      if (!guesses || !guesses.length) {
+        messages.innerHTML = ''
+        return
+      }
+      var html = guesses.map(function (g) {
+        if (g.correct) {
+          if (g.playerId === playerId) return '<div style="color: var(--success); margin-bottom: 0.25rem">' + t('xx') + ' · ' + t('youGotIt') + '</div>'
+          return '<div style="color: var(--success); margin-bottom: 0.25rem">' + t('xx') + ' · ' + escapeHtml(g.playerName || '?') + ' ' + t('someoneGotIt') + '</div>'
+        }
+        return '<div style="margin-bottom: 0.25rem">' + escapeHtml(g.playerName || '?') + ': ' + escapeHtml(g.content) + '</div>'
+      }).join('')
+      messages.innerHTML = html
+      messages.scrollTop = messages.scrollHeight
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div')
+      div.textContent = s
+      return div.innerHTML
+    }
+
+    // ========== 游戏页 ==========
+    function startGame(serverState) {
+      if (roomPlayers.length === 0) return
+
+      maxRounds = (serverState && serverState.maxRounds) ? serverState.maxRounds : (roomPlayers.length * 3)
+      if (serverState && serverState.gameWordSeed) gameWordSeed = serverState.gameWordSeed
+      if (serverState && serverState.status === 'playing' && serverState.painterId) {
+        currentRound = serverState.currentRound || 1
+        var wordIdx = serverState.wordIndex != null ? serverState.wordIndex : 0
+        currentWordObj = getWordByIndex(wordIdx)
+        painterWord = currentWordObj.en
+        wordCategory = currentWordObj.cat_zh
+        roomPlayers.forEach(function (p) { p.isPainter = p.id === serverState.painterId })
+      } else {
+        var painterIndex = Math.floor(Math.random() * roomPlayers.length)
+        roomPlayers.forEach(function (p, i) { p.isPainter = i === painterIndex })
+        currentWordObj = getWordByIndex(0)
+        painterWord = currentWordObj.en
+        wordCategory = currentWordObj.cat_zh
+      }
+
+      isPainter = roomPlayers.find(function (p) { return p.id === playerId })?.isPainter || false
+      var painter = roomPlayers.find(function (p) { return p.isPainter })
+
+      document.getElementById('painter-name').textContent = painter ? painter.name : '-'
+      document.getElementById('max-rounds').textContent = maxRounds
+      document.getElementById('max-rounds-info').textContent = maxRounds
+      updateRoundSuffix()
+      document.getElementById('word-display').textContent = isPainter ? (currentWordObj ? (currentWordObj.en + ' / ' + currentWordObj.zh) : painterWord) : getCategoryDisplayForGuesser()
+      document.getElementById('guess-input-area').style.display = isPainter ? 'none' : 'flex'
+      document.getElementById('current-round').textContent = currentRound
+      document.getElementById('round-info').textContent = currentRound
+
+      var drawPainter = document.getElementById('draw-section-painter')
+      var drawGuesser = document.getElementById('draw-section-guesser')
+      var toolbar = document.getElementById('draw-toolbar')
+      if (drawPainter) drawPainter.style.display = 'block'
+      if (drawGuesser) drawGuesser.style.display = 'none'
+      if (toolbar) toolbar.style.display = isPainter ? 'flex' : 'none'
+      var pageGame = document.getElementById('page-game')
+      if (pageGame) pageGame.setAttribute('data-role', isPainter ? 'painter' : 'guesser')
+
+      showPage('game')
+      updateGamePage()
+      const canvas = document.getElementById('draw-canvas')
+      if (canvas) {
+        const ctx = canvas.getContext('2d')
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+      initCanvas()
+      startRoundTimer()
+      if (gamePollTimer) clearInterval(gamePollTimer)
+      gamePollTimer = setInterval(async function () {
+        if (currentPage !== 'game' && currentPage !== 'round-end') return
+        if (!roomId) return
+        var state = await getRoomStateAsync(roomId)
+        if (state.gameEnded) {
+          if (gamePollTimer) { clearInterval(gamePollTimer); gamePollTimer = null }
+          getRoomPlayersAsync(roomId).then(function (players) {
+            if (players && players.length) roomPlayers = players
+            showGameEnd()
+          })
+          return
+        }
+        if (state.gameWordSeed) gameWordSeed = state.gameWordSeed
+        if (currentPage === 'game') {
+          renderGameChat(state.guesses || [])
+          var guesses = state.guesses || []
+          var correctSet = {}
+          guesses.forEach(function (g) { if (g.correct) correctSet[g.playerId] = true })
+          var numCorrect = Object.keys(correctSet).length
+          var numGuessers = Math.max(0, roomPlayers.length - 1)
+          if (!state.roundEnded && numGuessers > 0 && numCorrect >= numGuessers) {
+            setTimeout(function () { triggerRoundEnd() }, 300)
+          }
+          // 画家绘制时或正在同步时，不更新画布
+          if ((!isPainter || (!drawing && !isSyncingCanvas)) && !isSyncingCanvas) {
+            const canvas = document.getElementById('draw-canvas')
+            if (canvas) {
+              const ctx = canvas.getContext('2d')
+              if (state.canvasData) {
+                const currentData = canvas.toDataURL('image/png')
+                if (currentData !== state.canvasData) {
+                  const img = new Image()
+                  img.onload = function () {
+                    // 再次检查，防止在加载过程中开始绘制
+                    if (drawing && isPainter) return
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    ctx.drawImage(img, 0, 0)
+                  }
+                  img.src = state.canvasData
+                }
+              } else {
+                // 如果服务器上没有画布数据，清空画布（但画家绘制时不清空）
+                if (!isPainter || !drawing) {
+                  const currentData = canvas.toDataURL('image/png')
+                  const emptyCanvas = document.createElement('canvas')
+                  emptyCanvas.width = canvas.width
+                  emptyCanvas.height = canvas.height
+                  const emptyData = emptyCanvas.toDataURL('image/png')
+                  if (currentData !== emptyData) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                  }
+                }
+              }
+            }
+          }
+          if (state.wordIndex != null) {
+            currentWordObj = getWordByIndex(state.wordIndex)
+            painterWord = currentWordObj.en
+            wordCategory = currentWordObj.cat_zh
+          }
+          if (state.roundEnded) {
+            getRoomPlayersAsync(roomId).then(function (players) {
+              if (players && players.length) roomPlayers = players
+              updateGamePage()
+              showRoundEndPage(state.roundScores || [])
+            })
+          }
+        }
+        if (currentPage === 'round-end') {
+          if (state.roundEnded === false && state.currentRound != null && state.currentRound !== currentRound) {
+            var wi = state.wordIndex != null ? state.wordIndex : (state.currentRound - 1)
+            currentWordObj = getWordByIndex(wi)
+            painterWord = currentWordObj.en
+            wordCategory = currentWordObj.cat_zh
+            currentRound = state.currentRound
+            roomPlayers.forEach(function (p) { p.isPainter = p.id === state.painterId })
+            isPainter = roomPlayers.find(function (p) { return p.id === playerId })?.isPainter || false
+            var painter = roomPlayers.find(function (p) { return p.isPainter })
+            document.getElementById('painter-name').textContent = painter ? painter.name : '-'
+            document.getElementById('word-display').textContent = isPainter ? (currentWordObj ? (currentWordObj.en + ' / ' + currentWordObj.zh) : painterWord) : getCategoryDisplayForGuesser()
+            document.getElementById('guess-input-area').style.display = isPainter ? 'none' : 'flex'
+            var drawPainter = document.getElementById('draw-section-painter')
+            var drawGuesser = document.getElementById('draw-section-guesser')
+            var toolbar = document.getElementById('draw-toolbar')
+            if (drawPainter) drawPainter.style.display = 'block'
+            if (drawGuesser) drawGuesser.style.display = 'none'
+            if (toolbar) toolbar.style.display = isPainter ? 'flex' : 'none'
+            var pageGame = document.getElementById('page-game')
+            if (pageGame) pageGame.setAttribute('data-role', isPainter ? 'painter' : 'guesser')
+            document.getElementById('round-info').textContent = currentRound
+            document.getElementById('round-time').textContent = roundTime
+            updateRoundSuffix()
+            showPage('game')
+            const canvas = document.getElementById('draw-canvas')
+            if (canvas) {
+              const ctx = canvas.getContext('2d')
+              ctx.clearRect(0, 0, canvas.width, canvas.height)
+            }
+            initCanvas()
+            startRoundTimer()
+          }
+        }
+      }, 500)
+    }
+
+    function applyRoundScores(roundScores) {
+      roundScores.forEach(function (entry) {
+        var p = roomPlayers.find(function (x) { return x.id === entry.playerId })
+        if (p) p.score = (p.score || 0) + (entry.addScore || 0)
+      })
+      updateGamePage()
+    }
+
+    function showRoundEndPage(roundScores) {
+      if (roundTimer) clearInterval(roundTimer)
+      var answerText = currentWordObj ? (currentWordObj.en + ' / ' + currentWordObj.zh) : painterWord
+      document.getElementById('round-answer').textContent = answerText
+      document.getElementById('round-scores').innerHTML = roundScores.map(function (e) {
+        return '<div style="padding: 0.25rem 0; color: var(--success)">' + (e.playerName || '?') + ' +' + (e.addScore || 0) + '</div>'
+      }).join('')
+      showPage('round-end')
+    }
+
+    function updateGamePage() {
+      const sorted = [...roomPlayers].sort((a, b) => b.score - a.score)
+      document.getElementById('score-list').innerHTML = sorted.map((p, i) =>
+        `<li style="padding: 0.25rem 0">${i + 1}. ${p.name} - ${p.score}</li>`
+      ).join('')
+    }
+
+    function setTool(t) {
+      tool = t
+      document.getElementById('tool-brush').classList.toggle('active', t === 'brush')
+      document.getElementById('tool-eraser').classList.toggle('active', t === 'eraser')
+    }
+
+    function clearCanvas() {
+      const canvas = document.getElementById('draw-canvas')
+      const ctx = canvas.getContext('2d')
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      syncCanvasToServer()
+    }
+
+    var canvasSyncTimer = null
+    var isSyncingCanvas = false
+    async function syncCanvasToServer(immediate) {
+      if (!isPainter || !roomId) return
+      const canvas = document.getElementById('draw-canvas')
+      if (!canvas) return
+      if (canvasSyncTimer) clearTimeout(canvasSyncTimer)
+      var syncFunc = async function () {
+        isSyncingCanvas = true
+        const canvasData = canvas.toDataURL('image/png')
+        await setRoomStateAsync(roomId, { canvasData: canvasData })
+        setTimeout(function () { isSyncingCanvas = false }, 50)
+      }
+      if (immediate) {
+        syncFunc()
+      } else {
+        canvasSyncTimer = setTimeout(syncFunc, 100)
+      }
+    }
+
+    async function loadCanvasFromServer() {
+      if (!roomId || (drawing && isPainter) || isSyncingCanvas) return
+      const canvas = document.getElementById('draw-canvas')
+      if (!canvas) return
+      const state = await getRoomStateAsync(roomId)
+      const ctx = canvas.getContext('2d')
+      if (state.canvasData) {
+        const currentData = canvas.toDataURL('image/png')
+        if (currentData === state.canvasData) return
+        const img = new Image()
+        img.onload = function () {
+          if ((drawing && isPainter) || isSyncingCanvas) return
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+          ctx.drawImage(img, 0, 0)
+        }
+        img.src = state.canvasData
+      } else {
+        // 如果服务器上没有画布数据，清空画布（但画家绘制时不清空）
+        if (!isPainter || !drawing) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+        }
+      }
+    }
+
+    function initCanvas() {
+      const canvas = document.getElementById('draw-canvas')
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      
+      // 清理旧的事件监听器
+      if (canvasResizeHandler) {
+        window.removeEventListener('resize', canvasResizeHandler)
+      }
+      
+      // 清理画布事件监听器
+      canvas.onmousedown = null
+      canvas.onmousemove = null
+      canvas.onmouseup = null
+      canvas.onmouseleave = null
+      canvas.ontouchstart = null
+      canvas.ontouchmove = null
+      canvas.ontouchend = null
+      canvas.style.pointerEvents = 'auto'
+      
+      // 响应式画布（所有玩家都需要）
+      function resizeCanvas() {
+        const wrap = canvas.parentElement
+        const maxWidth = wrap.clientWidth - 32
+        const maxHeight = Math.min(600, window.innerHeight * 0.5)
+        const ratio = Math.min(maxWidth / 800, maxHeight / 600)
+        canvas.style.width = (800 * ratio) + 'px'
+        canvas.style.height = (600 * ratio) + 'px'
+      }
+      resizeCanvas()
+      canvasResizeHandler = resizeCanvas
+      window.addEventListener('resize', canvasResizeHandler)
+
+      const getPos = (e) => {
+        const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+        if (e.touches) {
+          return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY }
+        }
+        return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }
+      }
+
+      // 只有画家才能绘制
+      if (isPainter) {
+        canvas.onmousedown = canvas.ontouchstart = (e) => {
+          e.preventDefault()
+          drawing = true
+          const pos = getPos(e)
+          lastX = pos.x
+          lastY = pos.y
+        }
+
+        var lastSyncTime = 0
+        canvas.onmousemove = canvas.ontouchmove = (e) => {
+          if (!drawing) return
+          e.preventDefault()
+          const pos = getPos(e)
+          ctx.strokeStyle = tool === 'eraser' ? '#1e1e2e' : brushColor
+          ctx.lineWidth = tool === 'eraser' ? brushSize * 3 : brushSize
+          ctx.lineCap = 'round'
+          ctx.beginPath()
+          ctx.moveTo(lastX, lastY)
+          ctx.lineTo(pos.x, pos.y)
+          ctx.stroke()
+          lastX = pos.x
+          lastY = pos.y
+          // 每300ms同步一次，避免太频繁
+          var now = Date.now()
+          if (now - lastSyncTime > 300) {
+            lastSyncTime = now
+            syncCanvasToServer()
+          }
+        }
+
+        canvas.onmouseup = canvas.onmouseleave = canvas.ontouchend = () => {
+          if (drawing) {
+            drawing = false
+            // 绘制完成后立即同步，不延迟
+            if (canvasSyncTimer) clearTimeout(canvasSyncTimer)
+            syncCanvasToServer(true)
+          }
+        }
+
+        var brushColorEl = document.getElementById('brush-color')
+        var brushSizeEl = document.getElementById('brush-size')
+        if (brushColorEl) brushColorEl.onchange = (e) => { brushColor = e.target.value }
+        if (brushSizeEl) brushSizeEl.oninput = (e) => { brushSize = parseInt(e.target.value) }
+      } else {
+        // 猜词方：禁用绘制，但可以查看画布
+        canvas.style.pointerEvents = 'none'
+      }
+      
+      // 加载服务器上的画布数据（所有玩家都需要）
+      loadCanvasFromServer()
+    }
+
+    async function handleGuess() {
+      var input = document.getElementById('guess-input')
+      var raw = input.value.trim()
+      var guess = raw.toUpperCase()
+      if (!guess) return
+      input.value = ''
+      var correct = currentWordObj ? isGuessCorrect(guess, currentWordObj) : (guess === painterWord)
+      await postGuessAsync(roomId, {
+        playerId: playerId,
+        playerName: playerName,
+        content: guess,
+        correct: correct,
+        timestamp: Date.now()
+      })
+      var state = await getRoomStateAsync(roomId)
+      renderGameChat(state.guesses || [])
+      // 若全部猜对则结束本轮
+      var guesses = state.guesses || []
+      var correctSet = {}
+      guesses.forEach(function (g) {
+        if (g.correct) correctSet[g.playerId] = true
+      })
+      var numCorrect = Object.keys(correctSet).length
+      var numGuessers = Math.max(0, roomPlayers.length - 1)
+      if (numGuessers > 0 && numCorrect >= numGuessers) {
+        setTimeout(function () { triggerRoundEnd() }, 500)
+      }
+    }
+
+    function startRoundTimer() {
+      if (roundTimer) clearInterval(roundTimer)
+      roundTime = 45
+      roundTimer = setInterval(function () {
+        roundTime--
+        document.getElementById('round-time').textContent = roundTime
+        if (roundTime <= 0) {
+          clearInterval(roundTimer)
+          triggerRoundEnd()
+        }
+      }, 1000)
+    }
+
+    var SCORE_BY_ORDER = [100, 80, 60, 50, 40]
+    // 画家根据猜对人数得分：0人=0, 1人=40, 2人=70, 3人=100, 4人+=120
+    var PAINTER_SCORE_BY_COUNT = [0, 40, 70, 100, 120]
+
+    async function triggerRoundEnd() {
+      if (roundTimer) clearInterval(roundTimer)
+      var state = await getRoomStateAsync(roomId)
+      if (state.roundEnded && state.roundScores) {
+        var players = await getRoomPlayersAsync(roomId)
+        if (players && players.length) roomPlayers = players
+        updateGamePage()
+        showRoundEndPage(state.roundScores)
+        return
+      }
+      var guesses = state.guesses || []
+      var allCorrect = guesses.filter(function (g) { return g.correct }).sort(function (a, b) { return a.timestamp - b.timestamp })
+      var seen = {}
+      var correctList = allCorrect.filter(function (g) {
+        if (seen[g.playerId]) return false
+        seen[g.playerId] = true
+        return true
+      })
+      var painterIdThisRound = state.painterId
+      var roundScores = []
+      correctList.forEach(function (g, i) {
+        var addScore = SCORE_BY_ORDER[i] != null ? SCORE_BY_ORDER[i] : 40
+        roundScores.push({ playerId: g.playerId, playerName: g.playerName, addScore: addScore })
+      })
+      var numCorrect = correctList.length
+      var painterScore = (PAINTER_SCORE_BY_COUNT[Math.min(numCorrect, PAINTER_SCORE_BY_COUNT.length - 1)] ?? PAINTER_SCORE_BY_COUNT[PAINTER_SCORE_BY_COUNT.length - 1])
+      if (painterIdThisRound && numCorrect > 0 && painterScore > 0) {
+        var painter = roomPlayers.find(function (p) { return p.id === painterIdThisRound })
+        roundScores.push({ playerId: painterIdThisRound, playerName: painter ? painter.name : '画家', addScore: painterScore })
+      }
+      applyRoundScores(roundScores)
+      await saveRoomPlayersAsync(roomId, roomPlayers)
+      await setRoomStateAsync(roomId, { roundEnded: true, roundScores: roundScores })
+      showRoundEndPage(roundScores)
+      setTimeout(function () { advanceRound() }, 3000)
+    }
+
+    async function advanceRound() {
+      roundTime = 45
+      currentRound++
+      if (currentRound > maxRounds) {
+        if (gamePollTimer) { clearInterval(gamePollTimer); gamePollTimer = null }
+        await setRoomStateAsync(roomId, { gameEnded: true, roundEnded: false })
+        showGameEnd()
+        return
+      }
+      var nextWordIndex = (currentRound - 1)
+      var nextWordObj = getWordByIndex(nextWordIndex)
+      var nextCategory = nextWordObj.cat_zh
+      var nextCategoryEn = nextWordObj.cat_en
+      var currentPainterIndex = roomPlayers.findIndex(function (p) { return p.id === (roomPlayers.find(function (x) { return x.isPainter }) || {}).id })
+      var nextPainterIndex = (currentPainterIndex + 1) % roomPlayers.length
+      var nextPainterId = roomPlayers[nextPainterIndex].id
+      roomPlayers.forEach(function (p, i) { p.isPainter = i === nextPainterIndex })
+      isPainter = roomPlayers.find(function (p) { return p.id === playerId })?.isPainter || false
+      currentWordObj = nextWordObj
+      painterWord = nextWordObj.en
+      wordCategory = nextCategory
+      await setRoomStateAsync(roomId, {
+        roundEnded: false,
+        currentRound: currentRound,
+        wordIndex: nextWordIndex,
+        word: nextWordObj.en,
+        wordCategory: nextCategory,
+        wordCategoryEn: nextCategoryEn,
+        painterId: nextPainterId,
+        canvasData: null
+      })
+      document.getElementById('current-round').textContent = currentRound
+      document.getElementById('round-info').textContent = currentRound
+      updateRoundSuffix()
+      document.getElementById('round-time').textContent = roundTime
+      var painter = roomPlayers.find(function (p) { return p.isPainter })
+      document.getElementById('painter-name').textContent = painter ? painter.name : '-'
+      document.getElementById('word-display').textContent = isPainter ? (currentWordObj ? (currentWordObj.en + ' / ' + currentWordObj.zh) : painterWord) : getCategoryDisplayForGuesser()
+      document.getElementById('guess-input-area').style.display = isPainter ? 'none' : 'flex'
+      var drawPainter = document.getElementById('draw-section-painter')
+      var drawGuesser = document.getElementById('draw-section-guesser')
+      var toolbar = document.getElementById('draw-toolbar')
+      if (drawPainter) drawPainter.style.display = 'block'
+      if (drawGuesser) drawGuesser.style.display = 'none'
+      if (toolbar) toolbar.style.display = isPainter ? 'flex' : 'none'
+      var pageGame = document.getElementById('page-game')
+      if (pageGame) pageGame.setAttribute('data-role', isPainter ? 'painter' : 'guesser')
+      showPage('game')
+      const canvas = document.getElementById('draw-canvas')
+      if (canvas) {
+        const ctx = canvas.getContext('2d')
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+      initCanvas()
+      startRoundTimer()
+    }
+
+    function showGameEnd() {
+      var ranking = [...roomPlayers].sort(function (a, b) { return b.score - a.score })
+      var scoreUnit = lang === 'en' ? ' pts' : ' 分'
+      document.getElementById('final-ranking').innerHTML = ranking.map(function (p, i) {
+        var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'
+        return '<li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: ' + (i === 0 ? 'rgba(124, 58, 237, 0.2)' : 'var(--bg)') + '; border-radius: var(--radius); margin-bottom: 0.5rem"><span>' + medal + ' ' + t('rank', { n: i + 1 }) + ' ' + p.name + '</span><span style="font-weight: 600">' + p.score + scoreUnit + '</span></li>'
+      }).join('')
+      showPage('game-end')
+    }
+
+    function playAgain() {
+      roomId = Math.floor(Math.random() * 9000 + 1000).toString()
+      document.getElementById('room-id').textContent = roomId
+      document.getElementById('game-room-id').textContent = roomId
+      roundTime = 45
+      currentRound = 1
+      isReady = false
+      
+      const player = {
+        id: playerId,
+        name: playerName,
+        ready: false,
+        score: 0,
+        walletAddress: walletAddress || null
+      }
+      roomPlayers = addPlayerToRoom(roomId, player)
+      
+      showPage('room')
+      updateRoomPage()
+    }
+
+    // ========== 初始化 ==========
+    async function initApp() {
+      applyI18n()
+      await checkWalletConnection()
+      restoreLoginState()
+      showPage('lobby')
+      updateLobbyAccount()
+      updateLobbySyncTip()
+      updateExistingRoomsList()
+      updateOnlineCount()
+    }
+    initApp()
+    
+    // 定期更新在线人数
+    setInterval(updateOnlineCount, 5000)
+  </script>
+</body>
+</html>

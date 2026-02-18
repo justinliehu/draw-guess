@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>导出 PWA 图标</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #1a1925; color: #e2e8f0; }
+    h1 { margin-bottom: 1rem; }
+    p { margin-bottom: 1rem; color: #94a3b8; }
+    canvas { display: block; margin: 1rem 0; border: 1px solid #333; }
+    a { display: inline-block; margin: 0.5rem 0.5rem 0.5rem 0; padding: 0.5rem 1rem; background: #7c3aed; color: white; text-decoration: none; border-radius: 8px; }
+    a:hover { background: #8b5cf6; }
+    #preview { max-width: 200px; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>导出图标 PNG</h1>
+  <p>点击下方链接下载 512×512 和 192×192 图标，保存到本游戏根目录并命名为 icon-512.png、icon-192.png。</p>
+  <img id="preview" alt="图标预览">
+  <canvas id="c512" width="512" height="512"></canvas>
+  <canvas id="c192" width="192" height="192"></canvas>
+  <p>
+    <a id="d512" href="#" download="icon-512.png">下载 icon-512.png</a>
+    <a id="d192" href="#" download="icon-192.png">下载 icon-192.png</a>
+  </p>
+  <script>
+    (function () {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">' +
+        '<rect width="512" height="512" fill="#1a1925"/>' +
+        '<g transform="translate(256,256)">' +
+        '<ellipse cx="-40" cy="-60" rx="28" ry="35" fill="#7c3aed" opacity="0.9"/>' +
+        '<path d="M-68 -25 L-12 85 L20 95 L-40 -35 Z" fill="#8b5cf6"/>' +
+        '<path d="M-12 85 L20 95 L30 70 L-20 50 Z" fill="#a78bfa"/>' +
+        '<ellipse cx="90" cy="-20" rx="55" ry="45" fill="#252336" stroke="#7c3aed" stroke-width="4"/>' +
+        '<path d="M55 5 L75 35 L95 5 Z" fill="#252336"/>' +
+        '<text x="90" y="-10" text-anchor="middle" fill="#22d3ee" font-size="28" font-family="sans-serif">?</text>' +
+        '</g></svg>';
+      var dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      var img = new Image();
+      img.id = 'svg';
+      img.style.maxWidth = '200px';
+      img.style.display = 'block';
+      img.style.marginBottom = '1rem';
+      document.getElementById('preview').replaceWith(img);
+      function draw(size, canvasId, linkId) {
+        var c = document.getElementById(canvasId);
+        var ctx = c.getContext('2d');
+        c.width = size;
+        c.height = size;
+        ctx.drawImage(img, 0, 0, size, size);
+        document.getElementById(linkId).href = c.toDataURL('image/png');
+      }
+      img.onload = function () {
+        draw(512, 'c512', 'd512');
+        draw(192, 'c192', 'd192');
+      };
+      img.onerror = function () {
+        document.body.insertAdjacentHTML('beforeend', '<p style="color:#f59e0b">图标加载失败，请刷新重试。</p>');
+      };
+      img.src = dataUrl;
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Render.com 一键部署
+# 使用方式：在 https://dashboard.render.com 选择 New -> Web Service，连接本仓库，Render 会自动识别此文件
+
+services:
+  - type: web
+    name: draw-guess-online
+    runtime: node
+    plan: free
+    buildCommand: "echo 'No build needed'"
+    startCommand: "node server.cjs"
+    envVars:
+      - key: NODE_VERSION
+        value: "18"

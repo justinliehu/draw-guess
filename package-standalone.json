@@ -1,0 +1,14 @@
+{
+  "name": "draw-guess-online",
+  "version": "1.0.0",
+  "description": "你画我猜 · 线上版（单页 + Node 服务）",
+  "private": true,
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs",
+    "dev": "node server.cjs"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
