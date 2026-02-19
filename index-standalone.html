@@ -1756,6 +1756,28 @@
             painterWord = currentWordObj.en
             wordCategory = currentWordObj.cat_zh
           }
+          if (state.currentRound != null && state.currentRound !== currentRound) {
+            currentRound = state.currentRound
+            document.getElementById('current-round').textContent = currentRound
+            document.getElementById('round-info').textContent = currentRound
+            updateRoundSuffix()
+          }
+          if (state.painterId != null) {
+            roomPlayers.forEach(function (p) { p.isPainter = p.id === state.painterId })
+            isPainter = roomPlayers.find(function (p) { return p.id === playerId })?.isPainter || false
+            var painter = roomPlayers.find(function (p) { return p.isPainter })
+            document.getElementById('painter-name').textContent = painter ? painter.name : '-'
+            document.getElementById('word-display').textContent = isPainter ? (currentWordObj ? (currentWordObj.en + ' / ' + currentWordObj.zh) : painterWord) : getCategoryDisplayForGuesser()
+            document.getElementById('guess-input-area').style.display = isPainter ? 'none' : 'flex'
+            var drawPainter = document.getElementById('draw-section-painter')
+            var drawGuesser = document.getElementById('draw-section-guesser')
+            var toolbar = document.getElementById('draw-toolbar')
+            if (drawPainter) drawPainter.style.display = 'block'
+            if (drawGuesser) drawGuesser.style.display = 'none'
+            if (toolbar) toolbar.style.display = isPainter ? 'flex' : 'none'
+            var pageGame = document.getElementById('page-game')
+            if (pageGame) pageGame.setAttribute('data-role', isPainter ? 'painter' : 'guesser')
+          }
           if (state.roundEnded) {
             getRoomPlayersAsync(roomId).then(function (players) {
               if (players && players.length) roomPlayers = players
