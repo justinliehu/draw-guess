@@ -1716,7 +1716,7 @@
           guesses.forEach(function (g) { if (g.correct) correctSet[g.playerId] = true })
           var numCorrect = Object.keys(correctSet).length
           var numGuessers = Math.max(0, roomPlayers.length - 1)
-          if (!state.roundEnded && numGuessers > 0 && numCorrect >= numGuessers) {
+          if (!state.roundEnded && numGuessers > 0 && numCorrect >= numGuessers && isPainter) {
             setTimeout(function () { triggerRoundEnd() }, 300)
           }
           // 画家绘制时或正在同步时，不更新画布
@@ -2026,7 +2026,7 @@
       })
       var numCorrect = Object.keys(correctSet).length
       var numGuessers = Math.max(0, roomPlayers.length - 1)
-      if (numGuessers > 0 && numCorrect >= numGuessers) {
+      if (numGuessers > 0 && numCorrect >= numGuessers && isPainter) {
         setTimeout(function () { triggerRoundEnd() }, 500)
       }
     }
@@ -2039,7 +2039,7 @@
         document.getElementById('round-time').textContent = roundTime
         if (roundTime <= 0) {
           clearInterval(roundTimer)
-          triggerRoundEnd()
+          if (isPainter) triggerRoundEnd()
         }
       }, 1000)
     }
